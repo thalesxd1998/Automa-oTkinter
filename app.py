@@ -4,7 +4,7 @@ from manipulador_tickets import ManipuladorTickets
 
 app = Flask(__name__)
 
-CHAVE_API = "c373bc42-3049-4411-9727-94975d2b9fc0"
+CHAVE_API = "CHAVE DA API"
 
 
 # Função para conectar ao banco de dados MySQL
