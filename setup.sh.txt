@@ -1,0 +1,63 @@
+#!/bin/bash
+
+# Definir cores para o terminal
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+NC='\033[0m' # Sem cor
+
+# Arquivo de log para registrar erros
+LOG_FILE="setup_error.log"
+
+# Limpar o log de erro anterior, se existir
+> "$LOG_FILE"
+
+echo -e "${GREEN}Iniciando o setup do projeto de Automação de Diário...${NC}"
+
+# Função para verificar erros e registrar no log
+check_error() {
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}Erro na etapa: $1. Verifique o arquivo de log: $LOG_FILE${NC}"
+        echo "Erro na etapa: $1" >> "$LOG_FILE"
+        exit 1
+    fi
+}
+
+# Passo 1: Atualizar pacotes do sistema
+echo -e "${GREEN}Atualizando pacotes do sistema...${NC}"
+sudo apt update -y && sudo apt upgrade -y >> "$LOG_FILE" 2>&1
+check_error "Atualização do sistema"
+
+# Passo 2: Instalar Python3, pip e virtualenv
+echo -e "${GREEN}Verificando a instalação do Python3 e pip...${NC}"
+sudo apt install python3 python3-pip python3-venv -y >> "$LOG_FILE" 2>&1
+check_error "Instalação do Python3 e pip"
+
+# Passo 3: Criar ambiente virtual
+echo -e "${GREEN}Criando ambiente virtual...${NC}"
+if [ ! -d "venv" ]; then
+    python3 -m venv venv >> "$LOG_FILE" 2>&1
+    check_error "Criação do ambiente virtual"
+fi
+source venv/bin/activate >> "$LOG_FILE" 2>&1
+check_error "Ativação do ambiente virtual"
+
+# Passo 4: Instalar dependências listadas no requirements.txt
+echo -e "${GREEN}Instalando dependências do Python...${NC}"
+pip install --upgrade pip >> "$LOG_FILE" 2>&1
+check_error "Atualização do pip"
+pip install -r requirements.txt >> "$LOG_FILE" 2>&1
+check_error "Instalação das dependências"
+
+# Passo 5: Configurar o banco de dados
+echo -e "${GREEN}Configurando o banco de dados...${NC}"
+python3 setup_db.py >> "$LOG_FILE" 2>&1
+check_error "Configuração do banco de dados"
+
+echo -e "${GREEN}Setup concluído com sucesso!${NC}"
+
+# Passo 6: Iniciar o servidor Flask
+echo -e "${GREEN}Iniciando o servidor Flask...${NC}"
+python3 app.py >> "$LOG_FILE" 2>&1 &
+check_error "Iniciar o servidor Flask"
+
+echo -e "${GREEN}Diário iniciado com sucesso!${NC}"
