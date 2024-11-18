@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Automação de Tickets</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            padding: 20px;
+        }
+        .form-container {
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            font-size: 2.5rem;
+            color: #007bff;
+            margin-bottom: 30px;
+        }
+        .btn-custom {
+            background-color: #007bff;
+            color: white;
+            border-radius: 5px;
+            margin-top: 15px;
+        }
+        .ticket-container {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #dee2e6;
+            border-radius: 10px;
+            background-color: #ffffff;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        .ticket-item-wrapper {
+            position: relative;
+            margin-bottom: 10px;
+        }
+        .ticket-item {
+            padding: 10px;
+            background-color: #f1f1f1;
+            border-radius: 5px;
+            position: relative;
+        }
+        /* Botão "X" visual adicionado com CSS */
+        .ticket-item-wrapper::before {
+            content: "✕";
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: red;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 16px;
+            user-select: none;
+        }
+        .ticket-item-wrapper[data-removed="true"] {
+            display: none; /* Oculta o ticket quando removido */
+        }
+        .critical {
+            color: red;
+            font-weight: bold;
+        }
+        .return {
+            color: orange;
+            font-weight: bold;
+        }
+        .btn-copiar {
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1 class="text-center">Automação de Tickets</h1>
+
+        <!-- Formulário de busca de tickets -->
+        <div class="form-container">
+            <form action="/buscar_tickets" method="POST">
+                <div class="mb-3">
+                    <label for="ids_tickets" class="form-label">IDs dos Tickets</label>
+                    <input type="text" class="form-control" id="ids_tickets" name="ids_tickets" placeholder="Insira os IDs dos tickets separados por vírgula">
+                </div>
+                <div class="mb-3">
+                    <label for="blip" class="form-label">BLIPs</label>
+                    <input type="text" class="form-control" id="blip" name="blip" placeholder="Insira os BLIPs separados por vírgula">
+                </div>
+                <div class="mb-3">
+                    <label for="criticidade" class="form-label">Criticidade</label>
+                    <select class="form-select" id="criticidade" name="criticidade">
+                        <option value="" selected>Escolha a criticidade</option>
+                        <option value="C">Crítico (C)</option>
+                        <option value="R">Retorno (R)</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="user_select" class="form-label">Usuário</label>
+                    <select class="form-select" id="user_select" name="user_id" onchange="salvarUsuario()">
+                        <option value="Henrique">Henrique</option>
+                        <option value="Thales">Thales</option>
+                        <option value="Rafael">Rafael</option>
+                        <option value="Leonardo">Leonardo</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-custom w-100">Buscar Tickets</button>
+            </form>
+
+            <!-- Botão para limpar diário -->
+            <form action="/limpar_diario" method="POST" style="margin-top: 20px;">
+                <input type="hidden" name="user_id" value="{{ user_id }}">
+                <button type="submit" class="btn btn-danger w-100">Limpar Diário</button>
+            </form>
+        </div>
+
+        <!-- Exibição dos tickets formatados -->
+        <div class="ticket-container">
+            <h2>Diário Completo</h2>
+            <div id="diario-completo">
+                {% for ticket in tickets %}
+                <div class="ticket-item-wrapper" id="ticket-wrapper-{{ loop.index }}" onclick="removerTicket('{{ loop.index }}')">
+                    <!-- Conteúdo do ticket que será copiado -->
+                    <div class="ticket-item">
+                        {{ ticket|safe }}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Botão para copiar tickets -->
+        <button class="btn btn-outline-secondary btn-copiar" onclick="copiarDiario()">Copiar Diário</button>
+    </div>
+
+    <script>
+        function removerTicket(ticketIndex) {
+            const ticketElement = document.getElementById(`ticket-wrapper-${ticketIndex}`);
+            if (ticketElement) {
+                ticketElement.setAttribute("data-removed", "true");  // Marca o ticket como removido
+            }
+        }
+
+        function copiarDiario() {
+            const diario = document.getElementById('diario-completo');
+            const range = document.createRange();
+            range.selectNode(diario);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+
+            try {
+                const sucesso = document.execCommand('copy');
+                if (sucesso) {
+                    alert("Diário copiado com sucesso com formatação!");
+                } else {
+                    alert("Falha ao copiar o diário.");
+                }
+            } catch (err) {
+                console.error("Erro ao copiar o diário:", err);
+            }
+
+            // Limpar seleção
+            selection.removeAllRanges();
+        }
+
+        // Função para salvar o usuário selecionado no localStorage
+        function salvarUsuario() {
+            const userSelect = document.getElementById('user_select');
+            localStorage.setItem('usuarioSelecionado', userSelect.value);
+        }
+
+        // Função para carregar o usuário salvo ao carregar a página
+        function carregarUsuario() {
+            const usuarioSelecionado = localStorage.getItem('usuarioSelecionado');
+            if (usuarioSelecionado) {
+                document.getElementById('user_select').value = usuarioSelecionado;
+            }
+        }
+
+        // Carregar o usuário selecionado ao iniciar a página
+        window.onload = carregarUsuario;
+    </script>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+
+</body>
+</html>
